@@ -2,3 +2,8 @@
   border: solid 1px black;
   width: min-content;
 }
+
+.row {
+  display: flex;
+  flex-direction: row;
+}
