@@ -10,7 +10,7 @@
     :id id}))
 
 (reg-sub
- :cell
+ :cell-coordinates ;; [id x y]
  (fn [_ [_ id]]
    (js/console.log "made it this far" id)
    {:type :query

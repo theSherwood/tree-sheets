@@ -13,7 +13,21 @@
     :cell/child-grid -1 ;; No child-grid gets id of -1
     :cell/x 0
     :cell/y 0
-    :cell/text "Hello World!"}])
+    :cell/text "Hello World!"}
+   {:db/id 3
+    :app/type :type/cell
+    :cell/parent-grid 1
+    :cell/child-grid -1 ;; No child-grid gets id of -1
+    :cell/x 1
+    :cell/y 3
+    :cell/text "Hello World?"}
+   {:db/id 4
+    :app/type :type/cell
+    :cell/parent-grid 1
+    :cell/child-grid -1 ;; No child-grid gets id of -1
+    :cell/x 2
+    :cell/y 2
+    :cell/text "Hello World?"}])
 
 (def conn (create-conn {:grid/parent {:db/unique :db.unique/identity}}))
 (connect! conn)
