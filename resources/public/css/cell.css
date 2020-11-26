@@ -1,5 +1,40 @@
 .cell {
   min-width: 20px;
   min-height: 20px;
-  border: solid 1px black;
+  position: relative;
+}
+
+.cell textarea {
+  resize: none;
+  outline: none;
+  border: none;
+  vertical-align: top;
+}
+
+.cell .border {
+  position: absolute;
+}
+.cell .top.border {
+  border-top: solid 1px black;
+  top: -0.5px;
+  left: 0;
+  right: 0;
+}
+.cell .left.border {
+  border-left: solid 1px black;
+  left: -0.5px;
+  top: 0;
+  bottom: 0;
+}
+.cell .right.border {
+  border-right: solid 1px black;
+  right: -0.5px;
+  top: 0;
+  bottom: 0;
+}
+.cell .bottom.border {
+  border-bottom: solid 1px black;
+  bottom: -0.5px;
+  left: 0;
+  right: 0;
 }
