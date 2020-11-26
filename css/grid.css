@@ -1,9 +1,15 @@
 .grid {
-  border: solid 1px black;
+  border: solid 2px #ddd;
   width: min-content;
+  border-radius: 4px;
 }
 
-.row {
-  display: flex;
-  flex-direction: row;
+.grid table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.grid td {
+  border: none;
+  padding: 0;
 }
