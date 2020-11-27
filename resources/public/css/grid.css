@@ -12,4 +12,6 @@
 .grid td {
   border: none;
   padding: 0;
+  /* Hack to get textarea to fill height */
+  height: 1px; 
 }

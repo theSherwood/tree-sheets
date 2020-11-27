@@ -2,14 +2,16 @@
   min-width: 20px;
   min-height: 20px;
   position: relative;
+  height: 100%;
 }
 
-.cell textarea {
+.cell .textarea {
   resize: none;
   outline: none;
   border: none;
-  vertical-align: top;
   margin: 2px;
+  padding: 2px;
+  flex: 1 1 0;
 }
 
 .cell .border {
@@ -43,7 +45,8 @@
 }
 
 /* Gives the grid lines a slightly larger hit-box */
-.cell .border.bottom:after, .cell .border.top:after {
+.cell .border.bottom:after,
+.cell .border.top:after {
   content: "";
   background: transparent;
   position: absolute;
@@ -53,7 +56,8 @@
   left: 0;
   z-index: 50;
 }
-.cell .border.left:after, .cell .border.right:after {
+.cell .border.left:after,
+.cell .border.right:after {
   content: "";
   background: transparent;
   position: absolute;
@@ -73,12 +77,29 @@
   border: solid 1px black;
 }
 
-.cell .cell-inner:focus-within .focus-borders {
+.cell .cell-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: max-content;
+}
+.cell .cell-inner:focus {
+  outline: none;
+}
+.cell .cell-inner .overlay {
   z-index: 10;
-  border: solid black 2px;
   position: absolute;
   top: -1.5px;
   left: -1.5px;
   right: -1.5px;
   bottom: -1.5px;
+}
+.cell .cell-inner:focus-within .overlay {
+  border: solid black 2px;
+}
+
+.cell .cell-inner:focus .textarea,
+.cell .cell-inner:focus-within .textarea {
+  position: relative;
+  z-index: 150;
 }
