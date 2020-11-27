@@ -9,32 +9,41 @@
   outline: none;
   border: none;
   vertical-align: top;
+  margin: 2px;
 }
 
 .cell .border {
   position: absolute;
+  outline-color: black;
+  background: #ddd;
 }
 .cell .top.border {
-  border-top: solid 1px black;
+  height: 1px;
   top: -0.5px;
   left: 0;
   right: 0;
 }
 .cell .left.border {
-  border-left: solid 1px black;
+  width: 1px;
   left: -0.5px;
   top: 0;
   bottom: 0;
 }
 .cell .right.border {
-  border-right: solid 1px black;
+  width: 1px;
   right: -0.5px;
   top: 0;
   bottom: 0;
 }
 .cell .bottom.border {
-  border-bottom: solid 1px black;
+  height: 1px;
   bottom: -0.5px;
   left: 0;
   right: 0;
+}
+.cell .border:focus {
+  z-index: 10;
+}
+.cell .border.selected {
+  border: solid 1px black;
 }
