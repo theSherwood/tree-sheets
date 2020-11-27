@@ -20,85 +20,134 @@
 (def set-cell-text-debounced
   (debounce set-cell-text 800))
 
+(defn focus-parent-cell [node]
+  (loop [curr-node node]
+    (when (and curr-node (not= curr-node js/document))
+      (if (.contains (.-classList curr-node) "cell")
+        (.focus (.querySelector curr-node ".cell-inner"))
+        (recur (.-parentNode curr-node))))))
+
 (defn handle-textarea-keydown [e refs]
-  (.stopPropagation e)
   (let [textarea (:textarea @refs)
-        cursor-position (.-anchorOffset (.getSelection js/window))
-        text-length (.-length (.-textContent textarea))
+        start (.-selectionStart textarea)
+        end (.-selectionEnd textarea)
+        text-length (.-length (.-value textarea))
         key (.-key e)]
-    (js/console.log e (.-key e) cursor-position text-length (.getSelection js/window))
     (cond
-      (and (= key "ArrowUp") (zero? cursor-position))
+      (and (= key "ArrowUp") (zero? end))
       (focus-target-element (:top @refs))
 
-      (and (= key "ArrowDown") (= cursor-position text-length))
-      (focus-target-element (:bottom @refs)))))
+      (and (= key "ArrowDown") (= start text-length))
+      (focus-target-element (:bottom @refs))
+      
+      (= key "Escape")
+      (focus-parent-cell (.. e -currentTarget)))))
 
 (defn handle-cell-keydown [e refs cell-entity row col]
-  (js/console.log "e" e cell-entity)
-  (let [key (.-key e)
-        textarea (:textarea @refs)]
-    (cond
-      (and (= key "Enter") (.-shiftKey e))
-      (if-let [child-grid (:child-grid @refs)]
-        (when-let [first-child-cell (.querySelector child-grid ".cell-inner")]
-          (focus-target-element first-child-cell))
-        (if-let [cell-id (:db/id cell-entity)]
-          (dispatch [:create-graph cell-id])
-          (dispatch [:create-cell-with-child row col])))
+  (when (not (.contains (.-classList (.-target e)) "textarea"))
+    
+    (let [key (.-key e)
+          textarea (:textarea @refs)]
+      (cond
+        (and (= key "Enter") (.-shiftKey e))
+        (if-let [child-grid (:child-grid @refs)]
+          (when-let [first-child-cell (.querySelector child-grid ".cell-inner")]
+            (focus-target-element first-child-cell))
+          (if-let [cell-id (:db/id cell-entity)]
+            (dispatch [:create-graph cell-id])
+            (dispatch [:create-cell-with-child row col])))
 
-      (= key "Enter")
-      (do
-        (.preventDefault e)
-        (.stopPropagation e)
-        (focus-target-element textarea)
-        (js/setTimeout
-         #(.setSelectionRange textarea 0 999999)
-         50))
+        (= key "Enter")
+        (do
+          (.preventDefault e)
+          (.stopPropagation e)
+          (focus-target-element textarea)
+          (js/setTimeout
+           #(.setSelectionRange textarea 0 999999)
+           50))
 
-      (= key "ArrowUp")
-      (focus-target-element (:top @refs))
+        (= key "Escape")
+        (focus-parent-cell (.. e -currentTarget -parentNode -parentNode))
+        
+        (= key "ArrowUp")
+        (focus-target-element (:top @refs))
 
-      (= key "ArrowDown")
-      (focus-target-element (:bottom @refs))
+        (= key "ArrowDown")
+        (focus-target-element (:bottom @refs))
 
-      (= key "ArrowLeft")
-      (focus-target-element (:left @refs))
+        (= key "ArrowLeft")
+        (focus-target-element (:left @refs))
 
-      (= key "ArrowRight")
-      (focus-target-element (:right @refs)))))
+        (= key "ArrowRight")
+        (focus-target-element (:right @refs))))))
 
-(defn cell [row col]
-  (let [column-entity @(subscribe [:by-id col])
+(defn handle-overlay-mouse-down [e refs]
+  (if (= js/document.activeElement (:inner @refs))
+    (js/setTimeout #(focus-target-element (:textarea @refs)) 10)
+    (focus-target-element (:inner @refs))))
+
+(defn fix-textarea-height [textarea]
+  (when textarea
+    (set!
+     (.. textarea -style -height)
+     (str
+      (.. textarea -scrollHeight)
+      "px"))))
+
+(defn cell [row col grid-id grid]
+  (let [grid-entity @(subscribe [:by-id grid-id])
+        column-entity @(subscribe [:by-id col])
         width (:col/width column-entity)
         cell-entity @(subscribe [:cell-by-row-col row col])
+        cell-id (:db/id cell-entity)
         refs (r/atom {})]
-    (js/console.log "render" row col)
-    [:div.cell {:class (str row "-" col)
+    
+    [:div.cell {:class (str "loc-" row "-" col)
                 :ref #(swap! refs assoc :cell %)}
      [:div.cell-inner {:tab-index -1
                        :ref #(swap! refs assoc :inner %)
                        :on-key-down #(handle-cell-keydown
                                       % refs cell-entity row col)}
-      [:div.textarea {:content-editable true
-                      :ref #(swap! refs assoc :textarea %)
-                      :style {:font-size (get cell-entity :font-size "14px")
-                              :max-width (str (* 8 width) "px")}
-                      :on-change #(set-cell-text-debounced
-                                   (:db/id cell-entity)
-                                   (.. % -target -value)
-                                   row
-                                   col)
-                      :on-key-down #(handle-textarea-keydown % refs)}
-       (or (:cell/text cell-entity) "")]
       
-      (when-let [child-grid @(subscribe 
-                              [:by-id [:grid/parent (:db/id cell-entity)]])]
-        "huzzah")
+      [:textarea.textarea {:ref #(do 
+                                   (swap! refs assoc :textarea %)
+                                   (fix-textarea-height %))
+                           :cols 10000
+                           :style {:font-size (get cell-entity :font-size "14px")
+                                   :max-width (str (if (zero? (* 8 width)) 200 200) "px")}
+                           :on-input #(fix-textarea-height (:textarea @refs))
+                           :spellcheck "false"
 
-      [:div.overlay {:on-click #(focus-target-element (:inner @refs))}]]
+                           :on-change #(set-cell-text
+                                        cell-id
+                                        (.. % -target -value)
+                                        row
+                                        col)
+                           :value (or (:cell/text cell-entity) "")
 
-     [border refs :top]
-     [border refs :left]
-     [border refs :right]
-     [border refs :bottom]]))
+                          ;; The debouncing needs to be fixed.
+                           ;; The issue is that if the value isn't updated
+                           ;; on cell insert, we get data sticking around
+                           ;; in the textarea
+                           ;; 
+                          ;  :on-change #(set-cell-text-debounced
+                          ;              cell-id
+                          ;              (.. % -target -value)
+                          ;              row
+                          ;              col)
+                          ;  :default-value (or (:cell/text cell-entity) "")
+
+
+                           :on-key-down #(handle-textarea-keydown % refs)}]
+
+      [:div.overlay {:on-mouse-down #(handle-overlay-mouse-down % refs)}]]
+
+     (when-let [child-grid @(subscribe
+                             [:by-id [:grid/parent cell-id]])]
+       [:div.child-grid {:ref #(swap! refs assoc :child-grid %)}
+        [grid cell-id]])
+
+     [border refs :top grid-entity row col]
+     [border refs :left grid-entity row col]
+     [border refs :right grid-entity row col]
+     [border refs :bottom grid-entity row col]]))

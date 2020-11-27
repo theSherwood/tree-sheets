@@ -25,7 +25,6 @@
  :cell-by-row-col
  
  (fn [[_ row col]]
-   (js/console.log "cell by row col" row col)
    (subscribe [:cell-id row col]))
  
  (fn [cell-id]

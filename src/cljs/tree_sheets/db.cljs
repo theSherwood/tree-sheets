@@ -36,17 +36,17 @@
     :app/type :type/cell
     :cell/col 2
     :cell/row 5
-    :cell/text "Hello World!"}
+    :cell/text "Navigate with the arrow keys. Use the mouse to select cells or the borders between cells. Start typing while selecting the border between cells to insert a new cell"}
    {:db/id 10
     :app/type :type/cell
     :cell/col 3
     :cell/row 8
-    :cell/text "Hello World?"}
+    :cell/text "Shift-Enter to create a nested grid, or to select an existing one. Esc to select the encompassing cell."}
    {:db/id 11
     :app/type :type/cell
     :cell/col 4
     :cell/row 6
-    :cell/text "Hello World?"}
+    :cell/text "Lots of missing features, of course. But it's a fun start."}
 
    {:db/id 12
     :app/type :type/grid
@@ -63,4 +63,6 @@
 (def conn (create-conn {:grid/parent {:db/unique :db.unique/identity}}))
 (connect! conn)
 
-(add-watch conn :logger #(apply js/console.log (datoms @conn :eavt)))
+(add-watch conn :logger 
+           #(apply js/console.log 
+                   (datoms @conn :eavt)))
