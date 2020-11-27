@@ -14,9 +14,9 @@
 
 .cell .border {
   position: absolute;
-  outline-color: black;
   background: #ddd;
 }
+
 .cell .top.border {
   height: 1px;
   top: -0.5px;
@@ -41,9 +41,44 @@
   left: 0;
   right: 0;
 }
+
+/* Gives the grid lines a slightly larger hit-box */
+.cell .border.bottom:after, .cell .border.top:after {
+  content: "";
+  background: transparent;
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  right: 0;
+  left: 0;
+  z-index: 50;
+}
+.cell .border.left:after, .cell .border.right:after {
+  content: "";
+  background: transparent;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -2px;
+  left: -2px;
+  z-index: 50;
+}
+
 .cell .border:focus {
-  z-index: 10;
+  z-index: 20;
+  border: solid 1px black;
+  outline: none;
 }
 .cell .border.selected {
   border: solid 1px black;
+}
+
+.cell .cell-inner:focus-within .focus-borders {
+  z-index: 10;
+  border: solid black 2px;
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  right: -1.5px;
+  bottom: -1.5px;
 }
