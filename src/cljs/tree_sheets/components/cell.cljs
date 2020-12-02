@@ -27,7 +27,7 @@
         (.focus (.querySelector curr-node ".cell-inner"))
         (recur (.-parentNode curr-node))))))
 
-(defn handle-textarea-keydown [e refs]
+(defn textarea-key-down [e refs cell-entity row col]
   (let [textarea (:textarea @refs)
         start (.-selectionStart textarea)
         end (.-selectionEnd textarea)
@@ -39,17 +39,24 @@
 
       (and (= key "ArrowDown") (= start text-length))
       (focus-target-element (:bottom @refs))
-      
+
+      (and (= key "Enter") (.-shiftKey e))
+      (if-let [child-grid (:child-grid @refs)]
+        (when-let [first-child-cell (.querySelector child-grid ".cell-inner")]
+          (focus-target-element first-child-cell))
+        (if-let [cell-id (:db/id cell-entity)]
+          (dispatch [:create-graph cell-id])
+          (dispatch [:create-cell-with-child row col])))
+
       (= key "Escape")
       (focus-parent-cell (.. e -currentTarget)))))
 
-(defn handle-cell-keydown [e refs cell-entity row col]
+(defn cell-key-down [e refs cell-entity row col]
   (when (not (.contains (.-classList (.-target e)) "textarea"))
     
     (let [key (.-key e)
           textarea (:textarea @refs)]
-      (cond
-        (and (= key "Enter") (.-shiftKey e))
+      (if (and (= key "Enter") (.-shiftKey e))
         (if-let [child-grid (:child-grid @refs)]
           (when-let [first-child-cell (.querySelector child-grid ".cell-inner")]
             (focus-target-element first-child-cell))
@@ -57,31 +64,34 @@
             (dispatch [:create-graph cell-id])
             (dispatch [:create-cell-with-child row col])))
 
-        (= key "Enter")
-        (do
-          (.preventDefault e)
-          (.stopPropagation e)
-          (focus-target-element textarea)
-          (js/setTimeout
-           #(.setSelectionRange textarea 0 999999)
-           50))
+        (case key
+          "Enter"
+          (do
+            (.preventDefault e)
+            (.stopPropagation e)
+            (focus-target-element textarea)
+            (js/setTimeout
+             #(.setSelectionRange textarea 0 999999)
+             50))
 
-        (= key "Escape")
-        (focus-parent-cell (.. e -currentTarget -parentNode -parentNode))
-        
-        (= key "ArrowUp")
-        (focus-target-element (:top @refs))
+          "Escape"
+          (focus-parent-cell (.. e -currentTarget -parentNode -parentNode))
 
-        (= key "ArrowDown")
-        (focus-target-element (:bottom @refs))
+          "ArrowUp"
+          (focus-target-element (:top @refs))
 
-        (= key "ArrowLeft")
-        (focus-target-element (:left @refs))
+          "ArrowDown"
+          (focus-target-element (:bottom @refs))
 
-        (= key "ArrowRight")
-        (focus-target-element (:right @refs))))))
+          "ArrowLeft"
+          (focus-target-element (:left @refs))
 
-(defn handle-overlay-mouse-down [e refs]
+          "ArrowRight"
+          (focus-target-element (:right @refs))
+          
+          nil)))))
+
+(defn overlay-mouse-down [e refs]
   (if (= js/document.activeElement (:inner @refs))
     (js/setTimeout #(focus-target-element (:textarea @refs)) 10)
     (focus-target-element (:inner @refs))))
@@ -95,35 +105,43 @@
       "px"))))
 
 (defn cell [row col grid-id grid]
-  (let [grid-entity @(subscribe [:by-id grid-id])
-        column-entity @(subscribe [:by-id col])
-        width (:col/width column-entity)
-        cell-entity @(subscribe [:cell-by-row-col row col])
-        cell-id (:db/id cell-entity)
-        refs (r/atom {})]
-    
-    [:div.cell {:class (str "loc-" row "-" col)
-                :ref #(swap! refs assoc :cell %)}
-     [:div.cell-inner {:tab-index -1
-                       :ref #(swap! refs assoc :inner %)
-                       :on-key-down #(handle-cell-keydown
-                                      % refs cell-entity row col)}
-      
-      [:textarea.textarea {:ref #(do 
-                                   (swap! refs assoc :textarea %)
-                                   (fix-textarea-height %))
-                           :cols 10000
-                           :style {:font-size (get cell-entity :font-size "14px")
-                                   :max-width (str (if (zero? (* 8 width)) 200 200) "px")}
-                           :on-input #(fix-textarea-height (:textarea @refs))
-                           :spellcheck "false"
+  (let [grid-entity (subscribe [:by-id grid-id])
+        column-entity (subscribe [:by-id col])
+        cell-entity (subscribe [:cell-by-row-col row col])
+        refs (r/atom {})
 
-                           :on-change #(set-cell-text
-                                        cell-id
-                                        (.. % -target -value)
-                                        row
-                                        col)
-                           :value (or (:cell/text cell-entity) "")
+        handle-cell-key-down #(cell-key-down % refs @cell-entity row col)
+        handle-textarea-key-down #(textarea-key-down % refs @cell-entity row col)
+        handle-textarea-input #(fix-textarea-height (:textarea @refs))
+        handle-overlay-mouse-down #(overlay-mouse-down % refs)
+        handle-textarea-change #(set-cell-text
+                                 (:db/id @cell-entity)
+                                 (.. % -target -value)
+                                 row
+                                 col)]
+    
+    (fn []
+      (let [width (:col/width @column-entity)
+            cell-id (:db/id @cell-entity)]
+        [:div.cell {:class (str "loc-" row "-" col)
+                    :ref #(swap! refs assoc :cell %)}
+         [:div.cell-inner {:tab-index -1
+                           :ref #(swap! refs assoc :inner %)
+                           :on-key-down handle-cell-key-down}
+          
+          [:textarea.textarea {:ref #(do
+                                       (swap! refs assoc :textarea %)
+                                       (fix-textarea-height %))
+                               :cols 10000
+                               :style {:font-size (get @cell-entity :font-size "14px")
+                                       :max-width (str (if (zero?
+                                                            (* 8 (:col/width @column-entity)))
+                                                         200 200) "px")}
+                               :on-input handle-textarea-input
+                               :spell-check "false"
+
+                               :on-change handle-textarea-change
+                               :value (or (:cell/text @cell-entity) "")
 
                           ;; The debouncing needs to be fixed.
                            ;; The issue is that if the value isn't updated
@@ -135,19 +153,34 @@
                           ;              (.. % -target -value)
                           ;              row
                           ;              col)
-                          ;  :default-value (or (:cell/text cell-entity) "")
+                          ;  :default-value (or (:cell/text @cell-entity) "")
 
+                               :on-key-down handle-textarea-key-down}]
 
-                           :on-key-down #(handle-textarea-keydown % refs)}]
+          [:div.overlay {:on-mouse-down handle-overlay-mouse-down}]]
 
-      [:div.overlay {:on-mouse-down #(handle-overlay-mouse-down % refs)}]]
+         (when-let [child-grid @(subscribe
+                                 [:by-id [:grid/parent cell-id]])]
+           [:div.child-grid {:ref #(swap! refs assoc :child-grid %)}
+            [grid cell-id]])
 
-     (when-let [child-grid @(subscribe
-                             [:by-id [:grid/parent cell-id]])]
-       [:div.child-grid {:ref #(swap! refs assoc :child-grid %)}
-        [grid cell-id]])
-
-     [border refs :top grid-entity row col]
-     [border refs :left grid-entity row col]
-     [border refs :right grid-entity row col]
-     [border refs :bottom grid-entity row col]]))
+         [border {:refs refs
+                  :side :top
+                  :grid-id (:db/id @grid-entity)
+                  :row row
+                  :col col}]
+         [border {:refs refs
+                  :side :left
+                  :grid-id (:db/id @grid-entity)
+                  :row row
+                  :col col}]
+         [border {:refs refs
+                  :side :bottom
+                  :grid-id (:db/id @grid-entity)
+                  :row row
+                  :col col}]
+         [border {:refs refs
+                  :side :right
+                  :grid-id (:db/id @grid-entity)
+                  :row row
+                  :col col}]]))))

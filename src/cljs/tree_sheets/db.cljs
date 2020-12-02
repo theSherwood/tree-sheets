@@ -60,7 +60,9 @@
    {:db/id 14
     :app/type :type/row}])
 
-(def conn (create-conn {:grid/parent {:db/unique :db.unique/identity}}))
+(def conn (create-conn {:grid/parent {:db/unique :db.unique/identity}
+                        :cell/col {:db/valueType :db.type/ref}
+                        :cell/row {:db/valueType :db.type/ref}}))
 (connect! conn)
 
 (add-watch conn :logger 
