@@ -114,7 +114,7 @@
         handle-textarea-key-down #(textarea-key-down % refs @cell-entity row col)
         handle-textarea-input #(fix-textarea-height (:textarea @refs))
         handle-overlay-mouse-down #(overlay-mouse-down % refs)
-        handle-textarea-change #(set-cell-text
+        handle-textarea-change #(set-cell-text-debounced
                                  (:db/id @cell-entity)
                                  (.. % -target -value)
                                  row
@@ -141,19 +141,7 @@
                                :spell-check "false"
 
                                :on-change handle-textarea-change
-                               :value (or (:cell/text @cell-entity) "")
-
-                          ;; The debouncing needs to be fixed.
-                           ;; The issue is that if the value isn't updated
-                           ;; on cell insert, we get data sticking around
-                           ;; in the textarea
-                           ;; 
-                          ;  :on-change #(set-cell-text-debounced
-                          ;              cell-id
-                          ;              (.. % -target -value)
-                          ;              row
-                          ;              col)
-                          ;  :default-value (or (:cell/text @cell-entity) "")
+                               :default-value (or (:cell/text @cell-entity) "")
 
                                :on-key-down handle-textarea-key-down}]
 
