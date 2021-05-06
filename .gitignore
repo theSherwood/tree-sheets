@@ -1,8 +1,9 @@
 /out/
-/resources/public/js/compiled/
 /target/
 /*-init.clj
 /*.log
+.lsp
+.vscode
 
 # Leiningen
 /.lein-*
